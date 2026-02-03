@@ -32,11 +32,12 @@
             background-color: #0f1115;
             color: white;
             overflow: hidden;
-            /* 关键：禁止 iOS 橡皮筋回弹效果 */
             overscroll-behavior: none;
             position: fixed;
             width: 100%;
             height: 100%;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .camera-view {
@@ -48,7 +49,6 @@
             position: relative;
         }
 
-        /* 沉浸式顶部区域适配 */
         .status-header {
             padding-top: calc(var(--safe-top) + 1rem);
         }
@@ -74,14 +74,14 @@
         .result-card {
             transform: translateY(100%);
             transition: transform 0.5s cubic-bezier(0.17, 0.84, 0.44, 1);
-            padding-bottom: var(--safe-bottom);
+            padding-bottom: calc(var(--safe-bottom) + 1rem);
         }
 
         .result-card.show { transform: translateY(0); }
 
         .blur-bg {
             backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px); /* 兼容 Safari */
+            -webkit-backdrop-filter: blur(24px);
             background: rgba(28, 30, 35, 0.85);
         }
 
@@ -103,6 +103,18 @@
             50% { transform: scale(1.05); opacity: 1; }
             100% { transform: scale(1); opacity: 0.8; }
         }
+
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
     </style>
 </head>
 <body>
@@ -110,7 +122,7 @@
     <div class="camera-view" id="app">
         <div class="scan-line"></div>
 
-        <!-- 顶部状态栏 - 针对 iOS 刘海屏适配 -->
+        <!-- 顶部状态栏 -->
         <div class="absolute top-0 left-0 right-0 px-6 status-header flex justify-between items-start z-10">
             <div class="space-y-2">
                 <div class="blur-bg px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2">
@@ -209,7 +221,7 @@
                 </div>
                 <div class="flex gap-3 mt-8">
                     <button onclick="toggleProfile()" class="flex-1 py-4 rounded-2xl bg-white/5 font-bold">取消</button>
-                    <button onclick="saveBMR()" class="flex-1 py-4 rounded-2xl bg-green-500 text-black font-bold">保存同步</button>
+                    <button id="saveBmrBtn" onclick="saveBMR()" class="flex-1 py-4 rounded-2xl bg-green-500 text-black font-bold">保存同步</button>
                 </div>
             </div>
         </div>
@@ -220,18 +232,17 @@
                 <div class="text-4xl mb-4 animate-bounce">🥗</div>
                 <h2 class="text-xl font-black mb-6">同步数据到云端？</h2>
                 <div class="flex flex-col gap-3">
-                    <button onclick="confirmSave()" class="w-full py-5 rounded-2xl bg-green-500 text-black font-black">确认并同步</button>
+                    <button id="confirmBtn" onclick="confirmSave()" class="w-full py-5 rounded-2xl bg-green-500 text-black font-black">确认并同步</button>
                     <button onclick="hideSaveConfirm()" class="w-full py-4 rounded-2xl bg-white/5 font-bold text-white/60">暂不保存</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- PWA & Firebase Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // 1. PWA Manifest
         const manifest = {
@@ -250,7 +261,7 @@
         const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
         document.querySelector('#manifest-link').setAttribute('href', URL.createObjectURL(blob));
 
-        // 2. Firebase
+        // 2. Firebase Setup
         const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
         const appId = window.__app_id || 'calorie-tracker-ios';
         const app = initializeApp(firebaseConfig);
@@ -267,17 +278,24 @@
             { name: "全麦鸡肉卷", kcal: 320, protein: 25, fat: 8 }
         ];
 
-        async function init() {
-            try {
+        // 核心修复：确保 Auth 准备好后再处理逻辑
+        const initAuth = async () => {
+            if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                await signInWithCustomToken(auth, window.__initial_auth_token);
+            } else {
                 await signInAnonymously(auth);
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        currentUser = user;
-                        loadUserData();
-                    }
-                });
-            } catch (err) { console.error(err); }
-        }
+            }
+        };
+
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                console.log("User Authenticated:", user.uid);
+                loadUserData();
+            }
+        });
 
         function loadUserData() {
             if (!currentUser) return;
@@ -290,10 +308,11 @@
                     document.getElementById('bmrDisplay').innerText = snap.data().bmr;
                     document.getElementById('bmrInput').value = snap.data().bmr;
                 }
-            });
+            }, (err) => console.error("Profile Load Error:", err));
+
             onSnapshot(dailyRef, (snap) => {
-                document.getElementById('todayTotal').innerText = snap.exists() ? snap.data().totalKcal : 0;
-            });
+                document.getElementById('todayTotal').innerText = snap.exists() ? (snap.data().totalKcal || 0) : 0;
+            }, (err) => console.error("Daily Log Load Error:", err));
         }
 
         window.startScan = function() {
@@ -322,27 +341,61 @@
         window.showSaveConfirm = () => document.getElementById('saveConfirmModal').style.display = 'flex';
         window.hideSaveConfirm = () => document.getElementById('saveConfirmModal').style.display = 'none';
 
+        // 核心修复：添加错误处理和视觉反馈
         window.confirmSave = async () => {
-            if (!currentUser || !currentScanData) return;
+            if (!currentUser || !currentScanData) {
+                console.error("No user or no scan data");
+                return;
+            }
+            
+            const btn = document.getElementById('confirmBtn');
+            const originalText = btn.innerText;
+            btn.innerText = "同步中...";
+            btn.classList.add('loading-dots');
+            btn.disabled = true;
+
             const dateStr = new Date().toISOString().split('T')[0];
             const dailyRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'daily_logs', dateStr);
+            
             try {
                 const snap = await getDoc(dailyRef);
-                const total = snap.exists() ? (snap.data().totalKcal || 0) : 0;
-                await setDoc(dailyRef, { totalKcal: total + currentScanData.kcal }, { merge: true });
+                const currentTotal = snap.exists() ? (snap.data().totalKcal || 0) : 0;
+                await setDoc(dailyRef, { 
+                    totalKcal: currentTotal + currentScanData.kcal,
+                    lastUpdated: new Date().getTime()
+                }, { merge: true });
+                
                 hideSaveConfirm();
                 closeResult();
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error("Save Error:", err);
+                btn.innerText = "错误，请重试";
+            } finally {
+                btn.innerText = originalText;
+                btn.classList.remove('loading-dots');
+                btn.disabled = false;
+            }
         };
 
         window.saveBMR = async () => {
             const bmr = document.getElementById('bmrInput').value;
             if (!currentUser || !bmr) return;
+            
+            const btn = document.getElementById('saveBmrBtn');
+            btn.disabled = true;
+
             try {
                 const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'profile');
-                await setDoc(ref, { bmr: parseInt(bmr) }, { merge: true });
+                await setDoc(ref, { 
+                    bmr: parseInt(bmr),
+                    updatedAt: new Date().getTime()
+                }, { merge: true });
                 toggleProfile();
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error("BMR Save Error:", err);
+            } finally {
+                btn.disabled = false;
+            }
         };
 
         window.toggleProfile = () => {
@@ -356,8 +409,6 @@
             document.getElementById('scanBtn').disabled = false;
             document.getElementById('controls').style.opacity = '1';
         };
-
-        init();
     </script>
 </body>
 </html>

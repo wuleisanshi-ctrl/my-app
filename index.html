@@ -4,264 +4,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f1115">
-    
-    <!-- iOS 专属 PWA 配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CalorieLens">
-    
-    <!-- iOS 图标 -->
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='25' fill='%2310B981'/%3E%3Ctext x='50' y='65' font-family='Arial' font-size='50' text-anchor='middle' fill='white'%3ECL%3C/text%3E%3C/svg%3E">
 
-    <title>CalorieLens Pro - 智能饮食管家</title>
-    
-    <!-- PWA Manifest -->
-    <link id="manifest-link" rel="manifest">
-
+    <title>CalorieLens Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        
-        :root {
-            --safe-top: env(safe-area-inset-top);
-            --safe-bottom: env(safe-area-inset-bottom);
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #0f1115;
-            color: white;
-            overflow: hidden;
-            overscroll-behavior: none;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .camera-view {
-            height: 100vh;
-            width: 100vw;
-            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=1000');
-            background-size: cover;
-            background-position: center;
-            position: relative;
-        }
-
-        .status-header {
-            padding-top: calc(var(--safe-top) + 1rem);
-        }
-
-        .scan-line {
-            position: absolute;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(to right, transparent, #10B981, transparent);
-            box-shadow: 0 0 15px #10B981;
-            top: 0;
-            animation: scan 3s infinite linear;
-            display: none;
-        }
-
-        @keyframes scan {
-            0% { top: 20%; }
-            100% { top: 70%; }
-        }
-
-        .scanning-active .scan-line { display: block; }
-
-        .result-card {
-            transform: translateY(100%);
-            transition: transform 0.5s cubic-bezier(0.17, 0.84, 0.44, 1);
-            padding-bottom: calc(var(--safe-bottom) + 1rem);
-        }
-
+        :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0f1115; color: white; overflow: hidden; overscroll-behavior: none; position: fixed; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
+        .camera-view { height: 100vh; width: 100vw; background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=1000'); background-size: cover; background-position: center; position: relative; }
+        .status-header { padding-top: calc(var(--safe-top) + 1rem); }
+        .result-card { transform: translateY(100%); transition: transform 0.5s cubic-bezier(0.17, 0.84, 0.44, 1); padding-bottom: calc(var(--safe-bottom) + 1rem); }
         .result-card.show { transform: translateY(0); }
-
-        .blur-bg {
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            background: rgba(28, 30, 35, 0.85);
-        }
-
-        .modal-overlay {
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            display: none;
-        }
-
-        .target-box {
-            border: 2px solid #10B981;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.8; }
-        }
-
-        .loading-dots:after {
-            content: '.';
-            animation: dots 1s steps(5, end) infinite;
-        }
-
-        @keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60% { content: '...'; }
-            80%, 100% { content: ''; }
-        }
+        .blur-bg { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); background: rgba(28, 30, 35, 0.85); }
+        .modal-overlay { background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: none; }
+        .btn-active:active { transform: scale(0.95); }
+        .loading-dots:after { content: '.'; animation: dots 1s steps(5, end) infinite; }
+        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } 80%, 100% { content: ''; } }
     </style>
 </head>
 <body>
 
     <div class="camera-view" id="app">
-        <div class="scan-line"></div>
-
-        <!-- 顶部状态栏 -->
+        <!-- 顶部 -->
         <div class="absolute top-0 left-0 right-0 px-6 status-header flex justify-between items-start z-10">
             <div class="space-y-2">
                 <div class="blur-bg px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2">
-                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-white/80">AI Engine Ready</span>
+                    <div id="statusDot" class="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <span id="statusText" class="text-[10px] font-bold uppercase tracking-widest text-white/80">Connecting AI...</span>
                 </div>
                 <div class="blur-bg p-3 rounded-2xl border border-white/10">
-                    <div class="text-[10px] text-white/40 uppercase font-bold">今日摄入 / 基础代谢</div>
+                    <div class="text-[10px] text-white/40 uppercase font-bold">Today's Intake</div>
                     <div class="flex items-baseline gap-1">
-                        <span id="todayTotal" class="text-xl font-black text-green-400">0</span>
-                        <span class="text-xs text-white/40">/ <span id="bmrDisplay">1600</span> kcal</span>
+                        <span id="todayTotal" class="text-xl font-black text-green-400">--</span>
+                        <span class="text-xs text-white/40">kcal</span>
                     </div>
                 </div>
             </div>
-            <button onclick="toggleProfile()" class="w-12 h-12 rounded-2xl blur-bg flex items-center justify-center border border-white/10 text-xl shadow-lg active:scale-90 transition-transform">
-                ⚙️
-            </button>
+            <button onclick="toggleProfile()" class="w-12 h-12 rounded-2xl blur-bg flex items-center justify-center border border-white/10 text-xl btn-active">⚙️</button>
         </div>
 
-        <!-- 取景框 -->
+        <!-- 扫描框 -->
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div id="target" class="w-64 h-64 border-2 border-white/20 rounded-[40px] relative transition-all duration-300">
-                <div class="absolute -top-10 left-1/2 -translate-x-1/2 text-[10px] text-white/40 font-bold uppercase tracking-widest">Scanning Area</div>
-            </div>
+            <div id="target" class="w-64 h-64 border-2 border-white/20 rounded-[40px] relative"></div>
         </div>
 
-        <!-- 底部控制栏 -->
-        <div class="absolute bottom-12 left-0 right-0 px-10 flex justify-between items-center" id="controls" style="padding-bottom: var(--safe-bottom);">
-            <button class="w-14 h-14 rounded-2xl blur-bg flex items-center justify-center border border-white/10 text-xl">📊</button>
-            <button onclick="startScan()" id="scanBtn" class="w-24 h-24 rounded-full border-4 border-white flex items-center justify-center p-1.5 transition-transform active:scale-95">
+        <!-- 扫码按钮 -->
+        <div class="absolute bottom-12 left-0 right-0 px-10 flex justify-center items-center" style="padding-bottom: var(--safe-bottom);">
+            <button onclick="startScan()" id="scanBtn" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1 transition-all btn-active">
                 <div class="w-full h-full bg-white rounded-full"></div>
             </button>
-            <button class="w-14 h-14 rounded-2xl blur-bg flex items-center justify-center border border-white/10 text-xl">🍽️</button>
         </div>
 
-        <!-- 结果面板 -->
+        <!-- 结果 -->
         <div id="resultCard" class="result-card absolute bottom-0 left-0 right-0 p-4 z-50">
-            <div class="blur-bg rounded-[40px] p-8 border border-white/20 shadow-2xl relative overflow-hidden">
+            <div class="blur-bg rounded-[40px] p-8 border border-white/20 shadow-2xl relative">
                 <div class="flex justify-between items-start mb-6">
                     <div>
-                        <h2 class="text-3xl font-black mb-1" id="foodName">识别中...</h2>
-                        <p class="text-green-400 text-sm font-semibold">AI 神经网络匹配成功</p>
+                        <h2 class="text-3xl font-black mb-1" id="foodName">Scanning...</h2>
+                        <p class="text-green-400 text-sm font-semibold">AI Neural Match Success</p>
                     </div>
                     <button onclick="closeResult()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-xl">&times;</button>
                 </div>
-
-                <div class="grid grid-cols-3 gap-3 mb-8">
-                    <div class="text-center p-4 bg-white/5 rounded-3xl border border-white/5">
-                        <div class="text-2xl font-black text-white" id="calories">0</div>
-                        <div class="text-[9px] text-white/40 uppercase font-bold">Kcal</div>
-                    </div>
-                    <div class="text-center p-4 bg-white/5 rounded-3xl border border-white/5">
-                        <div class="text-2xl font-black text-white" id="protein">0g</div>
-                        <div class="text-[9px] text-white/40 uppercase font-bold">Protein</div>
-                    </div>
-                    <div class="text-center p-4 bg-white/5 rounded-3xl border border-white/5">
-                        <div class="text-2xl font-black text-white" id="fat">0g</div>
-                        <div class="text-[9px] text-white/40 uppercase font-bold">Fat</div>
-                    </div>
+                <div class="grid grid-cols-3 gap-3 mb-8 text-center text-sm">
+                    <div class="p-4 bg-white/5 rounded-3xl border border-white/5"><div class="text-2xl font-black" id="calories">0</div><div>Kcal</div></div>
+                    <div class="p-4 bg-white/5 rounded-3xl border border-white/5"><div class="text-2xl font-black" id="protein">0g</div><div>Protein</div></div>
+                    <div class="p-4 bg-white/5 rounded-3xl border border-white/5"><div class="text-2xl font-black" id="fat">0g</div><div>Fat</div></div>
                 </div>
-
-                <!-- 运动换算 -->
-                <div class="bg-white/5 rounded-3xl p-5 border border-white/5 mb-8 text-center">
-                    <h3 class="text-[10px] font-bold text-white/40 uppercase mb-4 tracking-widest">消耗本餐所需运动时间</h3>
-                    <div class="flex justify-around items-center">
-                        <div>
-                            <div class="text-xl mb-1">🏃‍♂️</div>
-                            <div class="font-bold text-sm" id="runTime">0m</div>
-                        </div>
-                        <div class="w-px h-6 bg-white/10"></div>
-                        <div>
-                            <div class="text-xl mb-1">🚴‍♀️</div>
-                            <div class="font-bold text-sm" id="cycleTime">0m</div>
-                        </div>
-                        <div class="w-px h-6 bg-white/10"></div>
-                        <div>
-                            <div class="text-xl mb-1">🏊‍♂️</div>
-                            <div class="font-bold text-sm" id="swimTime">0m</div>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="showSaveConfirm()" class="w-full bg-green-500 text-black font-black py-5 rounded-2xl transition-all shadow-lg active:scale-95 text-lg">
-                    记录今日饮食
-                </button>
+                <button id="confirmBtn" onclick="confirmSave()" class="w-full bg-green-500 text-black font-black py-5 rounded-2xl shadow-lg btn-active text-lg">Confirm & Sync</button>
             </div>
         </div>
 
-        <!-- 设置面板 -->
-        <div id="profileModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <div class="blur-bg w-full max-w-sm rounded-[32px] p-8 border border-white/20">
-                <h2 class="text-2xl font-black mb-6 text-center">基础代谢设置</h2>
-                <div class="space-y-4">
-                    <input type="number" id="bmrInput" class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xl font-bold focus:outline-none focus:border-green-500 text-center" placeholder="1600">
-                    <p class="text-xs text-center text-white/40 px-4">BMR 是您在安静状态下每天消耗的能量。</p>
-                </div>
-                <div class="flex gap-3 mt-8">
-                    <button onclick="toggleProfile()" class="flex-1 py-4 rounded-2xl bg-white/5 font-bold">取消</button>
-                    <button id="saveBmrBtn" onclick="saveBMR()" class="flex-1 py-4 rounded-2xl bg-green-500 text-black font-bold">保存同步</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 保存确认 -->
-        <div id="saveConfirmModal" class="modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-6">
-            <div class="blur-bg w-full max-w-xs rounded-[32px] p-8 border border-white/20 text-center">
-                <div class="text-4xl mb-4 animate-bounce">🥗</div>
-                <h2 class="text-xl font-black mb-6">同步数据到云端？</h2>
-                <div class="flex flex-col gap-3">
-                    <button id="confirmBtn" onclick="confirmSave()" class="w-full py-5 rounded-2xl bg-green-500 text-black font-black">确认并同步</button>
-                    <button onclick="hideSaveConfirm()" class="w-full py-4 rounded-2xl bg-white/5 font-bold text-white/60">暂不保存</button>
-                </div>
-            </div>
+        <!-- 弹窗消息 (代替 Alert) -->
+        <div id="toast" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 blur-bg px-6 py-4 rounded-2xl border border-white/20 z-[200] hidden text-center">
+            <p id="toastText" class="font-bold text-sm"></p>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // 1. PWA Manifest
-        const manifest = {
-            "short_name": "CalorieLens",
-            "name": "CalorieLens Pro",
-            "start_url": ".",
-            "display": "standalone",
-            "theme_color": "#0f1115",
-            "background_color": "#0f1115",
-            "icons": [{
-                "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='25' fill='%2310B981'/%3E%3Ctext x='50' y='65' font-family='Arial' font-size='50' text-anchor='middle' fill='white'%3ECL%3C/text%3E%3C/svg%3E",
-                "sizes": "512x512",
-                "type": "image/svg+xml"
-            }]
-        };
-        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        document.querySelector('#manifest-link').setAttribute('href', URL.createObjectURL(blob));
-
-        // 2. Firebase Setup
         const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
         const appId = window.__app_id || 'calorie-tracker-ios';
         const app = initializeApp(firebaseConfig);
@@ -271,87 +98,72 @@
         let currentUser = null;
         let currentScanData = null;
 
-        const foods = [
-            { name: "香煎三文鱼", kcal: 208, protein: 20, fat: 13 },
-            { name: "牛油果吐司", kcal: 280, protein: 6, fat: 18 },
-            { name: "美式黑咖啡", kcal: 5, protein: 0, fat: 0 },
-            { name: "全麦鸡肉卷", kcal: 320, protein: 25, fat: 8 }
-        ];
+        // 统一提示
+        function showMsg(txt) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastText').innerText = txt;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
 
-        // 核心修复：确保 Auth 准备好后再处理逻辑
-        const initAuth = async () => {
-            if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
-                await signInWithCustomToken(auth, window.__initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
+        // 状态监控
+        const updateStatus = (isOk) => {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            dot.className = isOk ? 'w-2 h-2 bg-green-500 rounded-full animate-pulse' : 'w-2 h-2 bg-red-500 rounded-full';
+            txt.innerText = isOk ? 'AI Engine Online' : 'Connecting AI...';
         };
 
-        initAuth();
-
+        // 认证
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
-                console.log("User Authenticated:", user.uid);
+                updateStatus(true);
                 loadUserData();
+            } else {
+                updateStatus(false);
+                signInAnonymously(auth).catch(() => setTimeout(() => location.reload(), 3000));
             }
         });
 
         function loadUserData() {
             if (!currentUser) return;
             const dateStr = new Date().toISOString().split('T')[0];
-            const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'profile');
             const dailyRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'daily_logs', dateStr);
-
-            onSnapshot(profileRef, (snap) => {
-                if (snap.exists()) {
-                    document.getElementById('bmrDisplay').innerText = snap.data().bmr;
-                    document.getElementById('bmrInput').value = snap.data().bmr;
-                }
-            }, (err) => console.error("Profile Load Error:", err));
-
             onSnapshot(dailyRef, (snap) => {
                 document.getElementById('todayTotal').innerText = snap.exists() ? (snap.data().totalKcal || 0) : 0;
-            }, (err) => console.error("Daily Log Load Error:", err));
+            }, (err) => console.log("Stream error, retrying..."));
         }
 
         window.startScan = function() {
             const btn = document.getElementById('scanBtn');
             btn.disabled = true;
-            document.getElementById('app').classList.add('scanning-active');
-            document.getElementById('target').classList.add('target-box');
-
+            btn.style.opacity = '0.5';
+            
             setTimeout(() => {
-                const food = foods[Math.floor(Math.random() * foods.length)];
-                currentScanData = food;
-                document.getElementById('foodName').innerText = food.name;
-                document.getElementById('calories').innerText = food.kcal;
-                document.getElementById('protein').innerText = food.protein + 'g';
-                document.getElementById('fat').innerText = food.fat + 'g';
-                document.getElementById('runTime').innerText = Math.round(food.kcal / 10) + 'm';
-                document.getElementById('cycleTime').innerText = Math.round(food.kcal / 7) + 'm';
-                document.getElementById('swimTime').innerText = Math.round(food.kcal / 8) + 'm';
-
-                document.getElementById('app').classList.remove('scanning-active');
+                const mockFoods = [
+                    { name: "Chicken Salad", kcal: 320, protein: 25, fat: 12 },
+                    { name: "Avocado Toast", kcal: 450, protein: 12, fat: 28 },
+                    { name: "Beef Steak", kcal: 580, protein: 45, fat: 35 }
+                ];
+                currentScanData = mockFoods[Math.floor(Math.random() * mockFoods.length)];
+                document.getElementById('foodName').innerText = currentScanData.name;
+                document.getElementById('calories').innerText = currentScanData.kcal;
+                document.getElementById('protein').innerText = currentScanData.protein + 'g';
+                document.getElementById('fat').innerText = currentScanData.fat + 'g';
                 document.getElementById('resultCard').classList.add('show');
-                document.getElementById('controls').style.opacity = '0';
-            }, 1800);
+            }, 800);
         };
 
-        window.showSaveConfirm = () => document.getElementById('saveConfirmModal').style.display = 'flex';
-        window.hideSaveConfirm = () => document.getElementById('saveConfirmModal').style.display = 'none';
-
-        // 核心修复：添加错误处理和视觉反馈
         window.confirmSave = async () => {
-            if (!currentUser || !currentScanData) {
-                console.error("No user or no scan data");
+            if (!currentUser) {
+                showMsg("Waiting for AI Engine...");
                 return;
             }
             
             const btn = document.getElementById('confirmBtn');
             const originalText = btn.innerText;
-            btn.innerText = "同步中...";
-            btn.classList.add('loading-dots');
+            btn.innerText = "Syncing...";
             btn.disabled = true;
 
             const dateStr = new Date().toISOString().split('T')[0];
@@ -362,52 +174,34 @@
                 const currentTotal = snap.exists() ? (snap.data().totalKcal || 0) : 0;
                 await setDoc(dailyRef, { 
                     totalKcal: currentTotal + currentScanData.kcal,
-                    lastUpdated: new Date().getTime()
-                }, { merge: true });
-                
-                hideSaveConfirm();
-                closeResult();
-            } catch (err) { 
-                console.error("Save Error:", err);
-                btn.innerText = "错误，请重试";
-            } finally {
-                btn.innerText = originalText;
-                btn.classList.remove('loading-dots');
-                btn.disabled = false;
-            }
-        };
-
-        window.saveBMR = async () => {
-            const bmr = document.getElementById('bmrInput').value;
-            if (!currentUser || !bmr) return;
-            
-            const btn = document.getElementById('saveBmrBtn');
-            btn.disabled = true;
-
-            try {
-                const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'profile');
-                await setDoc(ref, { 
-                    bmr: parseInt(bmr),
                     updatedAt: new Date().getTime()
                 }, { merge: true });
-                toggleProfile();
-            } catch (err) { 
-                console.error("BMR Save Error:", err);
-            } finally {
+                
+                showMsg("Saved successfully!");
+                closeResult();
+            } catch (err) {
+                showMsg("Sync failed. Check connection.");
+                btn.innerText = "Retry Sync";
                 btn.disabled = false;
             }
-        };
-
-        window.toggleProfile = () => {
-            const m = document.getElementById('profileModal');
-            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
         };
 
         window.closeResult = () => {
             document.getElementById('resultCard').classList.remove('show');
-            document.getElementById('target').classList.remove('target-box');
-            document.getElementById('scanBtn').disabled = false;
-            document.getElementById('controls').style.opacity = '1';
+            const sBtn = document.getElementById('scanBtn');
+            sBtn.disabled = false;
+            sBtn.style.opacity = '1';
+        };
+
+        window.toggleProfile = () => showMsg("Settings Profile coming soon...");
+
+        // 首次打开检查环境
+        window.onload = () => {
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isStandalone = window.navigator.standalone === true;
+            if (!isSafari && !isStandalone) {
+                showMsg("Please use Safari for the best experience!");
+            }
         };
     </script>
 </body>
